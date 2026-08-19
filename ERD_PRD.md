@@ -109,6 +109,10 @@ Tingkat keparahan bencana dikelompokkan dalam skema warna Colorbrewer yang *colo
 - **NFR-3 (Perlindungan PII & Keamanan Data):** Endpoint publik `doGet()` HANYA menyajikan data agregasi tingkat desa. Koordinat presisi rumah, nama korban, dan identitas pelapor disembunyikan untuk mencegah *doxxing*.
 - **NFR-4 (Password Hashing):** Password admin HARUS disimpan dalam bentuk SHA-256 Hash + Salt di Tab `Master_User`. Tidak boleh menyimpan *plaintext* password di Google Sheets.
 - **NFR-5 (Optimasi Batas Kuota Drive):** Foto dikompresi di sisi browser pengguna (HTML5 Canvas) menjadi ukuran maksimal 500 KB (resolusi maksimum 1280px) sebelum diunggah.
+- **NFR-6 (Race Condition Protection):** Penulisan data ke Google Sheets wajib menggunakan GAS `LockService.getScriptLock()` (timeout 30 detik) guna mencegah tabrakan data laporan.
+- **NFR-7 (Session Validation Caching):** Verifikasi token session menggunakan GAS `CacheService.getScriptCache()` untuk mempercepat otentikasi admin tanpa pemanggilan Sheets berulang.
+- **NFR-8 (Standardisasi ID_Desa):** String `ID_Desa` wajib menggunakan pemisah titik (`.`) standar Kemendagri 10-digit (misal: `53.01.01.2001`) pada Google Sheets dan berkas GeoJSON untuk dynamic join tanpa error.
+- **NFR-9 (Google Drive Permission):** Skrip pengunggah foto harus otomatis mengatur izin berkas yang diunggah ke `Access.ANYONE_WITH_LINK` agar visualisasi Leaflet.js dapat memuat gambar secara publik.
 
 ---
 
