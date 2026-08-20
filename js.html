@@ -17,24 +17,28 @@ function showPage(pageId) {
   // Show selected
   document.getElementById('page-' + pageId).classList.remove('hidden');
   
-  // Update nav buttons
+  // Update nav buttons style
   document.querySelectorAll('.nav-btn').forEach(b => {
-    b.classList.remove('bg-blue-600', 'bg-green-600', 'bg-purple-600');
-    b.classList.add('bg-gray-700');
+    b.className = "nav-btn px-4 py-2 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-200 text-gray-400 hover:text-white";
   });
   
+  const activeBtn = document.querySelector(`button[onclick="showPage('${pageId}')"]`);
+  if (activeBtn) {
+    if (pageId === 'map') {
+      activeBtn.className = "nav-btn px-4 py-2 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-200 bg-blue-600 text-white shadow-sm";
+    } else if (pageId === 'form') {
+      activeBtn.className = "nav-btn px-4 py-2 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-200 bg-green-600 text-white shadow-sm";
+    } else if (pageId === 'admin') {
+      activeBtn.className = "nav-btn px-4 py-2 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-200 bg-purple-600 text-white shadow-sm";
+    }
+  }
+  
   if (pageId === 'map') {
-    document.querySelector('button[onclick="showPage(\'map\')"]').classList.remove('bg-gray-700');
-    document.querySelector('button[onclick="showPage(\'map\')"]').classList.add('bg-blue-600');
     initMap();
     loadChoroplethData();
   } else if (pageId === 'form') {
-    document.querySelector('button[onclick="showPage(\'form\')"]').classList.remove('bg-gray-700');
-    document.querySelector('button[onclick="showPage(\'form\')"]').classList.add('bg-green-600');
     loadDesaList();
   } else if (pageId === 'admin') {
-    document.querySelector('button[onclick="showPage(\'admin\')"]').classList.remove('bg-gray-700');
-    document.querySelector('button[onclick="showPage(\'admin\')"]').classList.add('bg-purple-600');
     checkAdminSession();
   }
 }
@@ -113,10 +117,33 @@ async function loadChoroplethData() {
     const result = await runServer('getChoroplethData');
     choroplethData = result || [];
     renderChoropleth();
-    document.getElementById('map-info').textContent = `${choroplethData.length} desa dimuat. Update tiap 5 menit.`;
+    updateStatSummary();
+    document.getElementById('map-info').textContent = `Diperbarui: ${new Date().toLocaleTimeString('id-ID')} | ${choroplethData.length} desa`;
   } catch (err) {
     document.getElementById('map-info').textContent = 'Error: ' + err.message;
   }
+}
+
+function updateStatSummary() {
+  let totalBangunan = 0;
+  let totalLaporan = 0;
+  let weightedDamageSum = 0;
+  let totalLaporanValid = 0;
+
+  choroplethData.forEach(d => {
+    totalBangunan += parseInt(d.Total_Bangunan || 0);
+    totalLaporan += parseInt(d.Total_Laporan_Valid || 0);
+    weightedDamageSum += parseFloat(d.Skor_Damage || 0);
+    if (parseFloat(d.Skor_Damage || 0) > 0) {
+      totalLaporanValid++;
+    }
+  });
+
+  const avgDamage = totalLaporanValid > 0 ? (weightedDamageSum / totalLaporanValid).toFixed(2) : '0.00';
+
+  document.getElementById('stat-total-bangunan').textContent = totalBangunan.toLocaleString('id-ID');
+  document.getElementById('stat-total-laporan').textContent = totalLaporan.toLocaleString('id-ID');
+  document.getElementById('stat-average-damage').textContent = avgDamage + '%';
 }
 
 function renderChoropleth() {
@@ -274,14 +301,25 @@ function handleFileSelect(e) {
     const base64 = dataUrl.split(',')[1];
     canvas.dataset.base64 = base64;
     
-    // Preview
-    const preview = document.getElementById('fotoPreview');
-    preview.src = dataUrl;
-    preview.classList.remove('hidden');
-    preview.title = `${Math.round(dataUrl.length * 3/4 / 1024)} KB`;
+    // Preview toggle
+    document.getElementById('fotoPreview').src = dataUrl;
+    document.getElementById('preview-container').classList.remove('hidden');
+    document.getElementById('upload-placeholder').classList.add('hidden');
   };
   
   img.src = URL.createObjectURL(file);
+}
+
+function removeSelectedPhoto(e) {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  document.getElementById('fotoBukti').value = '';
+  const canvas = document.getElementById('compressCanvas');
+  canvas.dataset.base64 = '';
+  document.getElementById('preview-container').classList.add('hidden');
+  document.getElementById('upload-placeholder').classList.remove('hidden');
 }
 
 async function handleReportSubmit(e) {
@@ -415,29 +453,54 @@ function renderReportsTable(reports) {
   
   reports.forEach(r => {
     const tr = document.createElement('tr');
-    tr.className = 'border-t border-gray-700 hover:bg-gray-800';
+    tr.className = 'border-b border-gray-800 hover:bg-gray-900 transition duration-150';
     
-    const statusColor = r.Status_Validasi === 'Valid' ? 'text-green-400' :
-                        r.Status_Validasi === 'Ditolak' ? 'text-red-400' : 'text-yellow-400';
+    // Status Badge
+    let statusBadge = '';
+    if (r.Status_Validasi === 'Valid') {
+      statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Valid</span>';
+    } else if (r.Status_Validasi === 'Ditolak') {
+      statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-400 border border-red-500/20">Ditolak</span>';
+    } else {
+      statusBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">Menunggu</span>';
+    }
     
     const fotoHtml = r.Foto_Bukti 
-      ? `<a href="${r.Foto_Bukti}" target="_blank"><img src="${r.Foto_Bukti}" width="60" class="rounded"></a>`
-      : '<span class="text-gray-500">-</span>';
+      ? `<a href="${r.Foto_Bukti}" target="_blank" class="block hover:scale-105 transition-transform duration-200">
+           <img src="${r.Foto_Bukti}" width="48" height="48" class="object-cover rounded-lg border border-gray-800 bg-gray-950 min-w-[48px] min-h-[48px] h-12">
+         </a>`
+      : '<div class="w-12 h-12 rounded-lg bg-gray-950 flex items-center justify-center border border-gray-800 text-gray-700 text-[10px]">No Photo</div>';
+    
+    const dateStr = r.Timestamp ? new Date(r.Timestamp).toLocaleDateString('id-ID', {
+      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+    }) : '-';
+    
+    // Action Buttons
+    let actionsHtml = '';
+    if (r.Status_Validasi === 'Menunggu') {
+      actionsHtml = `
+        <div class="flex items-center justify-center gap-1.5">
+          <button onclick="adminAction('${r.ID_Laporan}', 'Valid', ${r._rowIndex})" class="px-2.5 py-1 text-xs font-bold bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white rounded-md transition duration-150">Setujui</button>
+          <button onclick="adminAction('${r.ID_Laporan}', 'Ditolak', ${r._rowIndex})" class="px-2.5 py-1 text-xs font-bold bg-red-600/10 text-red-400 border border-red-500/20 hover:bg-red-600 hover:text-white rounded-md transition duration-150">Tolak</button>
+        </div>
+      `;
+    } else {
+      actionsHtml = `<span class="text-[10px] text-gray-500">Moderasi oleh ${r.Validator_ID || '-'}</span>`;
+    }
     
     tr.innerHTML = `
-      <td class="p-2">${fotoHtml}</td>
-      <td class="p-2">${new Date(r.Timestamp).toLocaleString('id-ID')}</td>
-      <td class="p-2">${r.ID_Desa}</td>
-      <td class="p-2">${r.Kategori_Infra}</td>
-      <td class="p-2">${r.Tingkat_Kerusakan}</td>
-      <td class="p-2 text-xs">${parseFloat(r.Latitude).toFixed(4)}, ${parseFloat(r.Longitude).toFixed(4)}</td>
-      <td class="p-2 ${statusColor} font-medium">${r.Status_Validasi}</td>
-      <td class="p-2">
-        ${r.Status_Validasi === 'Menunggu' ? `
-          <button onclick="adminAction('${r.ID_Laporan}', 'Valid', ${r._rowIndex})" class="px-2 py-1 text-xs bg-green-600 hover:bg-green-700 rounded mr-1">Setujui</button>
-          <button onclick="adminAction('${r.ID_Laporan}', 'Ditolak', ${r._rowIndex})" class="px-2 py-1 text-xs bg-red-600 hover:bg-red-700 rounded">Tolak</button>
-        ` : `<span class="text-gray-500 text-xs">Done by ${r.Validator_ID || '-'}</span>`}
+      <td class="p-4">${fotoHtml}</td>
+      <td class="p-4 text-xs text-gray-400">${dateStr}</td>
+      <td class="p-4 font-semibold text-gray-200">${r.ID_Desa}</td>
+      <td class="p-4 text-gray-300 text-xs">${r.Kategori_Infra}</td>
+      <td class="p-4 text-xs">
+        <span class="font-medium ${r.Tingkat_Kerusakan === 'Berat' ? 'text-red-400' : r.Tingkat_Kerusakan === 'Sedang' ? 'text-amber-400' : 'text-yellow-200'}">
+          ${r.Tingkat_Kerusakan}
+        </span>
       </td>
+      <td class="p-4 text-[11px] font-mono text-gray-500">${parseFloat(r.Latitude).toFixed(5)}, ${parseFloat(r.Longitude).toFixed(5)}</td>
+      <td class="p-4">${statusBadge}</td>
+      <td class="p-4 text-center">${actionsHtml}</td>
     `;
     tbody.appendChild(tr);
   });
