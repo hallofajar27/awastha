@@ -8,9 +8,6 @@
 // KONSTANTA & KONFIGURASI
 // ============================================================
 
-const SPREADSHEET_ID = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID') || '';
-const DRIVE_FOLDER_ID = PropertiesService.getScriptProperties().getProperty('DRIVE_FOLDER_ID') || '';
-
 const SHEET_NAMES = {
   RAW_LAPORAN: 'Raw_Laporan',
   MASTER_DESA: 'Master_Desa',
@@ -58,10 +55,11 @@ const LOCK_TIMEOUT_MS = 30000; // 30 detik
  * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet}
  */
 function getSpreadsheet() {
-  if (!SPREADSHEET_ID) {
+  const spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if (!spreadsheetId) {
     throw new Error('SPREADSHEET_ID belum diset. Jalankan setupSheets() atau set property manual.');
   }
-  return SpreadsheetApp.openById(SPREADSHEET_ID);
+  return SpreadsheetApp.openById(spreadsheetId);
 }
 
 /**
@@ -81,10 +79,11 @@ function getSheet(sheetName) {
  * @returns {GoogleAppsScript.Drive.Folder}
  */
 function getDriveFolder() {
-  if (!DRIVE_FOLDER_ID) {
+  const folderId = PropertiesService.getScriptProperties().getProperty('DRIVE_FOLDER_ID');
+  if (!folderId) {
     throw new Error('DRIVE_FOLDER_ID belum diset. Jalankan setupSheets() untuk auto-create folder.');
   }
-  const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  const folder = DriveApp.getFolderById(folderId);
   return folder;
 }
 
@@ -97,8 +96,20 @@ function getDriveFolder() {
  * Jalankan sekali via menu "Setup Awal" atau manual di Apps Script editor
  */
 function setupSheets() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let ss = SpreadsheetApp.getActiveSpreadsheet();
   const scriptProps = PropertiesService.getScriptProperties();
+
+  // Jika standalone script (bukan container-bound), buat spreadsheet baru
+  if (!ss) {
+    const spreadsheetName = 'Awastha_Database';
+    // Cek apakah file database sudah pernah dibuat
+    const files = DriveApp.getFilesByName(spreadsheetName);
+    if (files.hasNext()) {
+      ss = SpreadsheetApp.open(files.next());
+    } else {
+      ss = SpreadsheetApp.create(spreadsheetName);
+    }
+  }
 
   // Set SPREADSHEET_ID property
   scriptProps.setProperty('SPREADSHEET_ID', ss.getId());
@@ -821,7 +832,11 @@ function installTriggers() {
     .everyMinutes(5)
     .create();
   
-  SpreadsheetApp.getUi().alert('Trigger agregasi 5 menit terpasang!');
+  try {
+    SpreadsheetApp.getUi().alert('Trigger agregasi 5 menit terpasang!');
+  } catch (e) {
+    console.log('UI alert skipped: running outside spreadsheet context');
+  }
 }
 
 /**
@@ -834,5 +849,9 @@ function uninstallTriggers() {
       ScriptApp.deleteTrigger(t);
     }
   }
-  SpreadsheetApp.getUi().alert('Trigger agregasi dihapus!');
+  try {
+    SpreadsheetApp.getUi().alert('Trigger agregasi dihapus!');
+  } catch (e) {
+    console.log('UI alert skipped: running outside spreadsheet context');
+  }
 }
