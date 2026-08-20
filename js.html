@@ -1,3 +1,4 @@
+  <script type="text/javascript">
 // ============================================================
 // AWASTHA FRONTEND - WebGIS + Form + Admin Dashboard
 // ============================================================
@@ -106,8 +107,8 @@ async function loadDesaGeoJSON() {
     features: [
       { type: 'Feature', properties: { ID_Desa: '53.01.01.2001', Nama_Desa: 'Desa Sample 1' }, geometry: { type: 'Polygon', coordinates: [[[121.0, -8.5], [121.1, -8.5], [121.1, -8.6], [121.0, -8.6], [121.0, -8.5]]] } },
       { type: 'Feature', properties: { ID_Desa: '53.01.01.2002', Nama_Desa: 'Desa Sample 2' }, geometry: { type: 'Polygon', coordinates: [[[121.2, -8.5], [121.3, -8.5], [121.3, -8.6], [121.2, -8.6], [121.2, -8.5]]] } }
-    ];
-  }
+    ]
+  };
 }
 
 async function loadChoroplethData() {
@@ -536,3 +537,5 @@ setInterval(() => {
     loadChoroplethData();
   }
 }, 60000); // 1 menit refresh UI
+
+  </script>
