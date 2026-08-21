@@ -15,3 +15,7 @@ Thumbs.db
 # Build output
 dist/
 build/
+
+# Clasp configuration
+.clasp.json
+

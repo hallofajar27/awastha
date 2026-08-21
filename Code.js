@@ -519,10 +519,8 @@ function doGet(e) {
     return getChoroplethDataApi();
   }
   
-  // Serve SPA
-  const template = HtmlService.createTemplateFromFile('index');
-  template.include = include;
-  return template.evaluate()
+  // Serve SPA - single file with all CSS/JS inline (no template engine)
+  return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('Peta Kerusakan Infrastruktur - Awastha')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
